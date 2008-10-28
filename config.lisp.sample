@@ -1,0 +1,11 @@
+
+;; irc settings
+(defparameter *irc-nick* "lispbot")
+(defparameter *irc-host* "irc.freenode.net")
+(defparameter *irc-channels* '("#lispbot"))
+
+;; xmpp settings
+;(defparameter *xmpp-user* "")
+;(defparameter *xmpp-pass* "")
+;(defparameter *xmpp-dest* "")
+
