@@ -1,8 +1,15 @@
 #!/usr/bin/sbcl --load
 (require :cl-irc)
+(require :cl-xmpp-sasl)
+(require :cl-ppcre)
 (require :iconv)
 (load "config")
 (load "command")
+
+(defun notify-keyword? (text keywords)
+  (and (car keywords)
+       (or (cl-ppcre:scan (car keywords) text)
+           (notify-keyword? text (cdr keywords)))))
 
 (defun jis2utf8 (str)
   (sb-ext:octets-to-string
@@ -34,14 +41,39 @@
   (format t "~A <~A> ~A~%"
           (car (irc:arguments msg))
           (irc:source msg)
-          (jis2utf8 (car (cdr (irc:arguments msg))))))
+          (jis2utf8 (second (irc:arguments msg)))))
+
+(defun notify-hook (msg)
+  (let ((text (jis2utf8 (second (irc:arguments msg)))))
+    (if (notify-keyword? text *notify-keywords*)
+        (progn
+          (format t "notify to: ~A <~A> ~A~%"
+                  (irc:arguments msg)
+                  (irc:source msg)
+                  text)
+          (let ((xmpp-conn (xmpp:connect :hostname *xmpp-host*)))
+            (xmpp:auth xmpp-conn
+                       *xmpp-user*
+                       *xmpp-pass*
+                       "lispbot"
+                       :mechanism :sasl-plain)
+            (xmpp:message xmpp-conn *xmpp-dest*
+                          (format nil "~A <~A> ~A"
+                                  (car (irc:arguments msg))
+                                  (irc:source msg)
+                                  text))
+            (xmpp:disconnect xmpp-conn)
+            )))))
 
 (defun command-hook (msg)
   (let ((text (jis2utf8 (second (irc:arguments msg)))))
     (if (or (char= (aref text 0) #\() (char= (aref text 0) #\'))
         (let ((expr (multiple-value-bind (x y)
                         (ignore-errors (read-from-string text))
-                      (if x x y))))
+                      (cond (x x)
+                            ((eq (type-of y) 'END-OF-FILE)
+                             (utf82jis "ERROR: カッコが閉じられていません。"))
+                            (t (type-of y))))))
           (format t "COMMAND HOOK:~%")
           (if (listp expr)
               (cond
@@ -54,15 +86,17 @@
                ((safe-symbol? expr) (eval-command msg expr))
                (t (irc:privmsg *connection*
                                (car (irc:arguments msg))
-                               (utf82jis "シンボルが定義されていません。"))))
+                               (utf82jis
+                                "ERROR: シンボルが定義されていません。"))))
             (irc:privmsg *connection*
                          (car (irc:arguments msg))
-                         (format nil "~A~%" expr))
+                         (format nil "~A" expr))
           )))))
 
 (irc:add-hook *connection* 'irc:irc-join-message #'join-hook)
 ;(irc:remove-hooks *connection* 'irc:irc-privmsg-message)
 (irc:add-hook *connection* 'irc:irc-privmsg-message 'print-hook)
+(irc:add-hook *connection* 'irc:irc-privmsg-message 'notify-hook)
 (irc:add-hook *connection* 'irc:irc-privmsg-message 'command-hook)
 
 (irc:read-message-loop *connection*)

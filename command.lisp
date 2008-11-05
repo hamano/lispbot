@@ -43,7 +43,6 @@
          (irc:privmsg conn (car (irc:arguments msg)) "reloaded.")
          )))
 
-
 (defparameter safe-symbol-list
   (append
    '(nil t)
@@ -74,6 +73,7 @@
 
 (defun eval-command (msg expr)
   (let ((conn (irc:connection msg)))
-    (progn (format t "COMMAND: eval")
-           (irc:privmsg conn (car (irc:arguments msg))
-                        (format nil "~A" (ignore-errors (eval expr)))))))
+    (progn
+      (format t "COMMAND: eval~%")
+      (irc:privmsg conn (car (irc:arguments msg))
+                   (format nil "~A" (ignore-errors (eval expr)))))))

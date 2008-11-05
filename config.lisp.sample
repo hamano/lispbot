@@ -4,8 +4,10 @@
 (defparameter *irc-host* "irc.freenode.net")
 (defparameter *irc-channels* '("#lispbot"))
 
+;(defparameter *notify-keywords* nil)
+
 ;; xmpp settings
+;(defparameter *xmpp-host* "jabber.jp")
 ;(defparameter *xmpp-user* "")
 ;(defparameter *xmpp-pass* "")
 ;(defparameter *xmpp-dest* "")
-
