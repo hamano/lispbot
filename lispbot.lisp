@@ -1,10 +1,15 @@
 #!/usr/bin/sbcl --load
+;(sb-ext:disable-debugger)
 (require :cl-irc)
 (require :cl-xmpp-sasl)
 (require :cl-ppcre)
 (require :iconv)
 (load "config")
 (load "command")
+
+(defvar xmpp:*debug-stream* nil)
+(defmethod xmpp:handle ((connection xmpp:connection) object)
+  object)
 
 (defun notify-keyword? (text keywords)
   (and (car keywords)
@@ -51,6 +56,9 @@
                   (irc:arguments msg)
                   (irc:source msg)
                   text)
+          (irc:privmsg (irc:connection msg)
+                       (car (irc:arguments msg))
+                       (format nil "DEBUG: notify to ~A" *xmpp-dest*))
           (let ((xmpp-conn (xmpp:connect :hostname *xmpp-host*)))
             (xmpp:auth xmpp-conn
                        *xmpp-user*
